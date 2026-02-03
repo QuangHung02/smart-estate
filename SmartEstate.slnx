@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="SmartEstate.Api/SmartEstate.Api.csproj" />
+  <Project Path="SmartEstate.App/SmartEstate.App.csproj" />
+  <Project Path="SmartEstate.Domain/SmartEstate.Domain.csproj" />
+  <Project Path="SmartEstate.Infrastructure/SmartEstate.Infrastructure.csproj" />
+  <Project Path="SmartEstate.Shared/SmartEstate.Shared.csproj" />
+</Solution>

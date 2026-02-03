@@ -1,0 +1,4 @@
+﻿Migrate DB (nếu chưa):
+
+Add-Migration Initial
+Update-Database
