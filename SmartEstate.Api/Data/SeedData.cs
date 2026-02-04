@@ -3,7 +3,7 @@ using SmartEstate.Domain.Entities;
 using SmartEstate.Domain.Enums;
 using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Time;
-
+using Microsoft.EntityFrameworkCore;
 
 namespace SmartEstate.Api.Data;
 
@@ -20,6 +20,9 @@ public static class SeedData
             var ctx = services.GetRequiredService<SmartEstateDbContext>();
             var hasher = services.GetRequiredService<IPasswordHasher>();
             var clock = services.GetRequiredService<IClock>();
+
+            // Apply migrations automatically
+            await ctx.Database.MigrateAsync();
 
             // if there are already users, assume seeded
             if (ctx.Users.Any())

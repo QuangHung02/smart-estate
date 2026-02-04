@@ -50,6 +50,14 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
+    // Include XML Comments
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
+
     // (optional) nếu bạn có upload file multipart:
     // c.OperationFilter<FileUploadOperationFilter>();
 });

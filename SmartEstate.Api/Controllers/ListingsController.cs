@@ -29,8 +29,17 @@ public sealed class ListingsController : ControllerBase
     }
 
     // Create listing: Seller/Broker
+    /// <summary>
+    /// Create a new property listing.
+    /// </summary>
+    /// <response code="201">Listing created successfully.</response>
+    /// <response code="400">Validation failed.</response>
+    /// <response code="403">User is not Seller or Broker.</response>
     [HttpPost]
     [Authorize(Roles = "Seller,Broker,Admin")]
+    [ProducesResponseType(typeof(Guid), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(403)]
     public async Task<IActionResult> Create([FromBody] CreateListingRequest req, CancellationToken ct)
     {
         var result = await _svc.CreateAsync(req, ct);
@@ -38,8 +47,14 @@ public sealed class ListingsController : ControllerBase
     }
 
     // Update listing: responsible or admin
+    /// <summary>
+    /// Update an existing listing.
+    /// </summary>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = "Seller,Broker,Admin")]
+    [ProducesResponseType(typeof(Guid), 200)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateListingRequest req, CancellationToken ct)
     {
         var isAdmin = User.IsInRole("Admin");
@@ -50,14 +65,39 @@ public sealed class ListingsController : ControllerBase
     // Get listing detail:
     // - public only: APPROVED + ACTIVE
     // - owner/admin can view non-public
+    /// <summary>
+    /// Get listing details.
+    /// </summary>
+    /// <remarks>
+    /// Public users can only see APPROVED and ACTIVE listings.
+    /// Phone number is masked unless "Get Contact" API is used.
+    /// </remarks>
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(ListingDetailDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetDetail([FromRoute] Guid id, CancellationToken ct)
     {
         var viewerId = _currentUser.UserId;
         var isAdmin = User?.Identity?.IsAuthenticated == true && User.IsInRole("Admin");
         var result = await _svc.GetDetailAsync(id, viewerId, isAdmin, ct);
         return ToActionResult(result);
+    }
+
+    // Get contact info (real phone) - require login
+    /// <summary>
+    /// Reveal the contact phone number of the listing owner.
+    /// </summary>
+    /// <remarks>Requires authentication.</remarks>
+    [HttpPost("{id:guid}/contact")]
+    [Authorize]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> GetContact([FromRoute] Guid id, CancellationToken ct)
+    {
+        var result = await _svc.GetContactAsync(id, ct);
+        if (!result.IsSuccess) return BadRequest(result.Error);
+        return Ok(new { Phone = result.Value });
     }
 
     // Update lifecycle: responsible or admin

@@ -15,7 +15,14 @@ public sealed class AuthController : ControllerBase
         _auth = auth;
     }
 
+    /// <summary>
+    /// Register a new user (Buyer, Seller, Broker).
+    /// </summary>
+    /// <response code="200">Registration successful, returns JWT token.</response>
+    /// <response code="409">Email already exists.</response>
     [HttpPost("register")]
+    [ProducesResponseType(typeof(AuthResponse), 200)]
+    [ProducesResponseType(typeof(Shared.Results.Error), 409)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
     {
         var result = await _auth.RegisterAsync(req, ct);
@@ -25,7 +32,14 @@ public sealed class AuthController : ControllerBase
         return Ok(result.Value);
     }
 
+    /// <summary>
+    /// Login with Email and Password.
+    /// </summary>
+    /// <response code="200">Login successful, returns JWT token.</response>
+    /// <response code="401">Invalid credentials.</response>
     [HttpPost("login")]
+    [ProducesResponseType(typeof(AuthResponse), 200)]
+    [ProducesResponseType(typeof(Shared.Results.Error), 401)]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         var result = await _auth.LoginAsync(req, ct);

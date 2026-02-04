@@ -28,5 +28,6 @@ public sealed record ListingDetailResponse(
     ListingLifecycleStatus LifecycleStatus,
     Guid CreatedByUserId,
     Guid ResponsibleUserId,
+    string? MaskedPhone,
     IReadOnlyList<ListingImageDto> Images
 );

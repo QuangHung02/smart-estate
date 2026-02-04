@@ -18,8 +18,14 @@ public sealed class TakeoversController : ControllerBase
     }
 
     // Seller requests takeover
+    /// <summary>
+    /// Seller requests a broker takeover for a listing.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = "Seller,Broker,Admin")]
+    [ProducesResponseType(typeof(Guid), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(403)]
     public async Task<IActionResult> Request([FromBody] RequestTakeoverRequest req, CancellationToken ct)
     {
         var isAdmin = User.IsInRole("Admin");
@@ -28,8 +34,14 @@ public sealed class TakeoversController : ControllerBase
     }
 
     // Broker accepts/rejects
+    /// <summary>
+    /// Broker accepts or rejects a takeover request.
+    /// </summary>
     [HttpPost("{id:guid}/decide")]
     [Authorize(Roles = "Broker,Admin")]
+    [ProducesResponseType(typeof(Guid), 200)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> Decide([FromRoute] Guid id, [FromBody] DecideTakeoverRequest req, CancellationToken ct)
     {
         var isAdmin = User.IsInRole("Admin");
@@ -38,8 +50,12 @@ public sealed class TakeoversController : ControllerBase
     }
 
     // Webhook/confirm payment (demo)
+    /// <summary>
+    /// Webhook callback to confirm payment (Simulated).
+    /// </summary>
     [HttpPost("/api/payments/{paymentId:guid}/paid")]
     [AllowAnonymous]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> MarkPaid([FromRoute] Guid paymentId, [FromBody] object? rawPayload, CancellationToken ct)
     {
         var raw = rawPayload?.ToString();
@@ -48,8 +64,13 @@ public sealed class TakeoversController : ControllerBase
     }
 
     // Seller unassign broker
+    /// <summary>
+    /// Seller unassigns a broker from a listing.
+    /// </summary>
     [HttpPost("/api/listings/{listingId:guid}/unassign-broker")]
     [Authorize(Roles = "Seller,Admin")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(403)]
     public async Task<IActionResult> UnassignBroker([FromRoute] Guid listingId, CancellationToken ct)
     {
         var isAdmin = User.IsInRole("Admin");

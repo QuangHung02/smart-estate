@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: smartestate_db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrongPassword!123
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlvolume:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: SmartEstate.Api/Dockerfile
+    container_name: smartestate_api
+    environment:
+      - ConnectionStrings__Default=Server=sqlserver;Database=SmartEstateDb;User Id=sa;Password=YourStrongPassword!123;TrustServerCertificate=True;
+      - Jwt__Key=REPLACE_WITH_A_LONG_RANDOM_SECRET_KEY_32+_CHARS
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "5068:8080"
+    depends_on:
+      - sqlserver
+
+volumes:
+  sqlvolume:

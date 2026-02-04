@@ -54,6 +54,7 @@ public sealed class ListingService
 
         var listing = await _db.Listings
             .Include(x => x.Images.Where(i => !i.IsDeleted))
+            .Include(x => x.ResponsibleUser)
             .FirstOrDefaultAsync(x => x.Id == listingId && !x.IsDeleted, ct);
 
         if (listing is null) return Result<ListingDetailResponse>.Fail(ErrorCodes.NotFound, "Listing not found.");
@@ -121,6 +122,21 @@ public sealed class ListingService
 
         await _db.SaveChangesAsync(true, ct);
         return Result.Ok();
+    }
+
+    public async Task<Result<string>> GetContactAsync(Guid listingId, CancellationToken ct = default)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null) return Result<string>.Fail(ErrorCodes.Unauthorized, "Unauthorized.");
+
+        var listing = await _db.Listings
+            .Include(x => x.ResponsibleUser)
+            .FirstOrDefaultAsync(x => x.Id == listingId && !x.IsDeleted, ct);
+
+        if (listing is null) return Result<string>.Fail(ErrorCodes.NotFound, "Listing not found.");
+
+        // Return real phone
+        return Result<string>.Ok(listing.ResponsibleUser.Phone ?? "");
     }
 
     public async Task<Result<ListingImageDto>> UploadImageAsync(
@@ -201,6 +217,16 @@ public sealed class ListingService
 
     private static ListingDetailResponse ToDetail(Listing l, IReadOnlyList<ListingImageDto> images)
     {
+        string? maskedPhone = null;
+        if (!string.IsNullOrWhiteSpace(l.ResponsibleUser?.Phone))
+        {
+            var p = l.ResponsibleUser.Phone;
+            if (p.Length > 6)
+                maskedPhone = p.Substring(0, 3) + "***" + p.Substring(p.Length - 3);
+            else
+                maskedPhone = p.Substring(0, Math.Max(0, p.Length - 2)) + "**";
+        }
+
         return new ListingDetailResponse(
             l.Id,
             l.Title,
@@ -225,6 +251,7 @@ public sealed class ListingService
             l.LifecycleStatus,
             l.CreatedByUserId,
             l.ResponsibleUserId,
+            maskedPhone,
             images
         );
     }
