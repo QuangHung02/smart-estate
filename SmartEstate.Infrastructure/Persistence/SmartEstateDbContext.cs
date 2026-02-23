@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartEstate.Domain.Common;
 using SmartEstate.Domain.Entities;
 using SmartEstate.Shared.Time;
@@ -25,6 +25,7 @@ public class SmartEstateDbContext : DbContext
     public DbSet<Listing> Listings => Set<Listing>();
     public DbSet<ListingImage> ListingImages => Set<ListingImage>();
     public DbSet<ListingReport> ListingReports => Set<ListingReport>();
+    public DbSet<ModerationReport> ModerationReports => Set<ModerationReport>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<TakeoverRequest> TakeoverRequests => Set<TakeoverRequest>();

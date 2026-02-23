@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartEstate.App.Common.Abstractions;
 using SmartEstate.App.Features.Listings.Dtos;
 using SmartEstate.Domain.Entities;
@@ -41,7 +41,15 @@ public sealed class ListingService
         var mod = await _moderation.ModerateListingAsync(listing.Title, listing.Description, ct);
         listing.ApplyModerationDecision(mod.Decision, mod.QualityScore, mod.Reason, mod.FlagsJson);
 
+        var report = ModerationReport.CreateFromAiDecision(
+            listing.Id,
+            mod.QualityScore,
+            mod.Decision,
+            mod.Reason,
+            mod.FlagsJson);
+
         _db.Listings.Add(listing);
+        _db.ModerationReports.Add(report);
         await _db.SaveChangesAsync(true, ct);
 
         return Result<ListingDetailResponse>.Ok(ToDetail(listing, new List<ListingImageDto>()));
@@ -64,13 +72,19 @@ public sealed class ListingService
 
         var update = ToUpdate(req);
 
-        // domain update
         listing.UpdateDetails(update);
 
-        // moderation again after update
         var mod = await _moderation.ModerateListingAsync(listing.Title, listing.Description, ct);
         listing.ApplyModerationDecision(mod.Decision, mod.QualityScore, mod.Reason, mod.FlagsJson);
 
+        var report = ModerationReport.CreateFromAiDecision(
+            listing.Id,
+            mod.QualityScore,
+            mod.Decision,
+            mod.Reason,
+            mod.FlagsJson);
+
+        _db.ModerationReports.Add(report);
         await _db.SaveChangesAsync(true, ct);
 
         var imgs = listing.Images

@@ -1,4 +1,4 @@
-﻿using SmartEstate.Domain.Common;
+using SmartEstate.Domain.Common;
 using SmartEstate.Domain.Enums;
 using SmartEstate.Domain.ValueObjects;
 
@@ -44,6 +44,7 @@ public class Listing : AuditableEntity
 
     public ICollection<ListingImage> Images { get; set; } = new List<ListingImage>();
     public ICollection<ListingReport> Reports { get; set; } = new List<ListingReport>();
+    public ICollection<ModerationReport> ModerationReports { get; set; } = new List<ModerationReport>();
     public ICollection<TakeoverRequest> TakeoverRequests { get; set; } = new List<TakeoverRequest>();
     public ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
     public ICollection<UserListingFavorite> FavoritedByUsers { get; set; } = new List<UserListingFavorite>();
