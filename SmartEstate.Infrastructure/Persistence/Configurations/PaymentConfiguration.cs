@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SmartEstate.Domain.Entities;
 
@@ -28,6 +28,7 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.HasIndex(x => new { x.Type, x.Status });
         b.HasIndex(x => x.PayerUserId);
         b.HasIndex(x => x.TakeoverRequestId);
+        b.HasIndex(x => x.PointPurchaseId);
         b.HasIndex(x => x.ProviderRef);
     }
 }

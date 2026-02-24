@@ -1,20 +1,23 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartEstate.App.Features.Search.Dtos;
 using SmartEstate.Domain.Enums;
 using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Errors;
 using SmartEstate.Shared.Paging;
 using SmartEstate.Shared.Results;
+using SmartEstate.Shared.Time;
 
 namespace SmartEstate.App.Features.Search;
 
 public sealed class SearchService
 {
     private readonly SmartEstateDbContext _db;
+    private readonly IClock _clock;
 
-    public SearchService(SmartEstateDbContext db)
+    public SearchService(SmartEstateDbContext db, IClock clock)
     {
         _db = db;
+        _clock = clock;
     }
 
     public async Task<Result<PagedResult<SearchItemResponse>>> SearchAsync(SearchRequest req, CancellationToken ct = default)
@@ -97,12 +100,20 @@ public sealed class SearchService
                 && x.Location.Lng >= minLng && x.Location.Lng <= maxLng);
         }
 
-        // sorting
+        // sorting: prioritize active boosts, then apply requested sort
+        var now = _clock.UtcNow;
+        var hasBoostExpr = _db.ListingBoosts
+            .Where(b => !b.IsDeleted && b.StartsAt <= now && b.EndsAt > now)
+            .Select(b => b.ListingId);
+
+        var qWithBoostOrder = q
+            .OrderByDescending(x => hasBoostExpr.Contains(x.Id));
+
         q = req.Sort?.ToLowerInvariant() switch
         {
-            "price_asc" => q.OrderBy(x => x.Price.Amount).ThenByDescending(x => x.CreatedAt),
-            "price_desc" => q.OrderByDescending(x => x.Price.Amount).ThenByDescending(x => x.CreatedAt),
-            _ => q.OrderByDescending(x => x.CreatedAt)
+            "price_asc" => qWithBoostOrder.ThenBy(x => x.Price.Amount).ThenByDescending(x => x.CreatedAt),
+            "price_desc" => qWithBoostOrder.ThenByDescending(x => x.Price.Amount).ThenByDescending(x => x.CreatedAt),
+            _ => qWithBoostOrder.ThenByDescending(x => x.CreatedAt)
         };
 
         // total

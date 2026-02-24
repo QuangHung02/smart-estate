@@ -1,4 +1,4 @@
-﻿using SmartEstate.App.Common.Abstractions;
+using SmartEstate.App.Common.Abstractions;
 using SmartEstate.Domain.Entities;
 using SmartEstate.Domain.Enums;
 using SmartEstate.Infrastructure.Persistence;
@@ -59,7 +59,6 @@ public static class SeedData
             ctx.BrokerProfiles.Add(bp);
             await ctx.SaveChangesAsync();
 
-            // Listing
             var listingUpdate = new ListingUpdate(
                 Title: "Cozy 2BR apartment near city center",
                 Description: "Bright, newly renovated 2-bedroom apartment. Close to transport and shops.",
@@ -82,8 +81,6 @@ public static class SeedData
             var listing = Listing.Create(seller.Id, listingUpdate);
             ctx.Listings.Add(listing);
             await ctx.SaveChangesAsync();
-
-            // Images
             ctx.ListingImages.Add(new ListingImage
             {
                 ListingId = listing.Id,
@@ -100,43 +97,26 @@ public static class SeedData
             });
             await ctx.SaveChangesAsync();
 
-            // Takeover request + payment (sample flow)
-            var takeover = TakeoverRequest.Create(
-                listingId: listing.Id,
-                sellerUserId: seller.Id,
-                brokerUserId: broker.Id,
-                payer: TakeoverPayer.Seller,
-                feeAmount: 5000000m,
-                feeCurrency: "VND",
-                note: "Please handle viewings and negotiations."
-            );
-
-            ctx.TakeoverRequests.Add(takeover);
-            await ctx.SaveChangesAsync();
-
-            // Accept + create payment + complete
-            takeover.Accept(clock.UtcNow);
-
-            var payment = Payment.CreateTakeoverFee(
-                payerUserId: takeover.GetPayerUserId(),
-                listingId: listing.Id,
-                takeoverRequestId: takeover.Id,
-                amount: 5000000m,
-                currency: "VND",
-                provider: "dummy",
-                providerRef: null,
-                payUrl: null
-            );
-
-            ctx.Payments.Add(payment);
-            await ctx.SaveChangesAsync();
-
-            takeover.AttachPayment(payment.Id);
-            takeover.Complete(clock.UtcNow);
-
-            payment.MarkPaid();
-
-            await ctx.SaveChangesAsync();
+            if (!ctx.PointPackages.Any())
+            {
+                ctx.PointPackages.Add(new PointPackage
+                {
+                    Name = "Starter 30",
+                    Points = 30,
+                    PriceAmount = 30000m,
+                    PriceCurrency = "VND",
+                    IsActive = true
+                });
+                ctx.PointPackages.Add(new PointPackage
+                {
+                    Name = "Pro 60",
+                    Points = 60,
+                    PriceAmount = 50000m,
+                    PriceCurrency = "VND",
+                    IsActive = true
+                });
+                await ctx.SaveChangesAsync();
+            }
 
             logger?.LogInformation("Seeding completed.");
         }

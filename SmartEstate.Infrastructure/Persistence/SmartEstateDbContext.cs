@@ -32,6 +32,13 @@ public class SmartEstateDbContext : DbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<UserListingFavorite> UserListingFavorites => Set<UserListingFavorite>();
+    public DbSet<UserPoints> UserPoints => Set<UserPoints>();
+    public DbSet<PointLedgerEntry> PointLedgerEntries => Set<PointLedgerEntry>();
+    public DbSet<PointPackage> PointPackages => Set<PointPackage>();
+    public DbSet<PointPurchase> PointPurchases => Set<PointPurchase>();
+    public DbSet<BrokerApplication> BrokerApplications => Set<BrokerApplication>();
+    public DbSet<ListingBoost> ListingBoosts => Set<ListingBoost>();
+    public DbSet<ConversationReadState> ConversationReadStates => Set<ConversationReadState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

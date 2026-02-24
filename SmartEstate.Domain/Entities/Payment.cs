@@ -1,4 +1,4 @@
-﻿using SmartEstate.Domain.Common;
+using SmartEstate.Domain.Common;
 using SmartEstate.Domain.Enums;
 using SmartEstate.Domain.ValueObjects;
 
@@ -13,6 +13,7 @@ public class Payment : AuditableEntity
     public Guid PayerUserId { get; private set; }
     public Guid? ListingId { get; private set; }
     public Guid? TakeoverRequestId { get; private set; }
+    public Guid? PointPurchaseId { get; private set; }
 
     // Provider info (vnpay/momo/stripe/etc)
     public string Provider { get; private set; }
@@ -41,6 +42,31 @@ public class Payment : AuditableEntity
             PayerUserId = payerUserId,
             ListingId = listingId,
             TakeoverRequestId = takeoverRequestId,
+            Amount = new Money(amount, currency),
+            Provider = provider,
+            ProviderRef = providerRef,
+            PayUrl = payUrl
+        };
+        return p;
+    }
+
+    public static Payment CreatePointPurchasePayment(
+        Guid payerUserId,
+        Guid pointPurchaseId,
+        decimal amount,
+        string currency,
+        string provider,
+        string? providerRef,
+        string? payUrl)
+    {
+        if (amount < 0) throw new DomainException("payment amount must be >= 0");
+
+        var p = new Payment
+        {
+            Type = PaymentType.Other,
+            Status = PaymentStatus.Pending,
+            PayerUserId = payerUserId,
+            PointPurchaseId = pointPurchaseId,
             Amount = new Money(amount, currency),
             Provider = provider,
             ProviderRef = providerRef,

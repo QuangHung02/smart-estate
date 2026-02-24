@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartEstate.App.Common.Abstractions;
 using SmartEstate.App.Features.Messages.Dtos;
 using SmartEstate.Domain.Entities;
@@ -119,9 +119,18 @@ public sealed class MessageService
             .OrderByDescending(x => x.LastMessageAt)
             .ToListAsync(ct);
 
+        var convIds = convs.Select(x => x.Id).ToList();
+        var readStates = await _db.ConversationReadStates
+            .AsNoTracking()
+            .Where(rs => convIds.Contains(rs.ConversationId) && rs.UserId == userId.Value)
+            .ToDictionaryAsync(rs => rs.ConversationId, ct);
+
         var dtos = convs.Select(x => {
             var isBuyer = x.BuyerUserId == userId.Value;
             var otherUser = isBuyer ? x.Listing.ResponsibleUser : x.BuyerUser;
+            var hasRead = readStates.TryGetValue(x.Id, out var rs)
+                ? (x.LastMessageAt is null || (rs.LastReadAt is not null && rs.LastReadAt >= x.LastMessageAt))
+                : false;
             
             return new ConversationDto(
                 x.Id,
@@ -133,7 +142,7 @@ public sealed class MessageService
                 null,
                 x.LastMessagePreview,
                 x.LastMessageAt,
-                true
+                hasRead
             );
         }).ToList();
 
@@ -164,5 +173,43 @@ public sealed class MessageService
             .ToListAsync(ct);
 
         return Result<List<MessageDto>>.Ok(msgs.Select(x => new MessageDto(x.Id, x.SenderUserId, x.Content, x.SentAt, x.IsRead)).ToList());
+    }
+
+    public async Task<Result> MarkConversationReadAsync(Guid conversationId, CancellationToken ct = default)
+    {
+        var userId = _currentUser.UserId;
+        if (userId is null) return Result.Fail(ErrorCodes.Unauthorized, "Unauthorized.");
+
+        var conv = await _db.Conversations.FirstOrDefaultAsync(x => x.Id == conversationId, ct);
+        if (conv is null) return Result.Fail(ErrorCodes.NotFound, "Conversation not found.");
+
+        var lastMsg = await _db.Messages
+            .Where(x => x.ConversationId == conversationId)
+            .OrderByDescending(x => x.SentAt)
+            .FirstOrDefaultAsync(ct);
+
+        var now = _clock.UtcNow;
+        var rs = await _db.ConversationReadStates
+            .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.UserId == userId.Value, ct);
+
+        if (rs is null)
+        {
+            rs = new ConversationReadState
+            {
+                ConversationId = conversationId,
+                UserId = userId.Value,
+                LastReadMessageId = lastMsg?.Id,
+                LastReadAt = now
+            };
+            _db.ConversationReadStates.Add(rs);
+        }
+        else
+        {
+            rs.LastReadMessageId = lastMsg?.Id;
+            rs.LastReadAt = now;
+        }
+
+        await _db.SaveChangesAsync(true, ct);
+        return Result.Ok();
     }
 }

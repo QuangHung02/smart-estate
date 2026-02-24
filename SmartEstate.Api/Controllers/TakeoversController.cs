@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartEstate.App.Features.BrokerTakeover;
 using SmartEstate.App.Features.BrokerTakeover.Dtos;
@@ -49,19 +49,6 @@ public sealed class TakeoversController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : MapError(result.Error);
     }
 
-    // Webhook/confirm payment (demo)
-    /// <summary>
-    /// Webhook callback to confirm payment (Simulated).
-    /// </summary>
-    [HttpPost("/api/payments/{paymentId:guid}/paid")]
-    [AllowAnonymous]
-    [ProducesResponseType(200)]
-    public async Task<IActionResult> MarkPaid([FromRoute] Guid paymentId, [FromBody] object? rawPayload, CancellationToken ct)
-    {
-        var raw = rawPayload?.ToString();
-        var result = await _svc.MarkPaymentPaidAsync(paymentId, raw, ct);
-        return result.IsSuccess ? Ok() : MapError(result.Error);
-    }
 
     // Seller unassign broker
     /// <summary>

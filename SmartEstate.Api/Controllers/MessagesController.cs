@@ -65,4 +65,16 @@ public class MessagesController : ControllerBase
         if (!result.IsSuccess) return BadRequest(result.Error);
         return Ok(result.Value);
     }
+
+    /// <summary>
+    /// Mark conversation as read for current user.
+    /// </summary>
+    [HttpPost("conversations/{id:guid}/read")]
+    [ProducesResponseType(200)]
+    public async Task<IActionResult> MarkConversationRead([FromRoute] Guid id, CancellationToken ct)
+    {
+        var result = await _svc.MarkConversationReadAsync(id, ct);
+        if (!result.IsSuccess) return BadRequest(result.Error);
+        return Ok();
+    }
 }

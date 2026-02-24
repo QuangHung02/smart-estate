@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartEstate.App.Common.Abstractions;
 using SmartEstate.App.Features.BrokerTakeover.Dtos;
 using SmartEstate.Domain.Entities;
@@ -7,6 +7,7 @@ using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Errors;
 using SmartEstate.Shared.Results;
 using SmartEstate.Shared.Time;
+using SmartEstate.App.Features.Points;
 
 namespace SmartEstate.App.Features.BrokerTakeover;
 
@@ -16,13 +17,15 @@ public sealed class TakeoverService
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
     private readonly IPaymentGateway _payments;
+    private readonly PointsService _points;
 
-    public TakeoverService(SmartEstateDbContext db, ICurrentUser currentUser, IClock clock, IPaymentGateway payments)
+    public TakeoverService(SmartEstateDbContext db, ICurrentUser currentUser, IClock clock, IPaymentGateway payments, PointsService points)
     {
         _db = db;
         _currentUser = currentUser;
         _clock = clock;
         _payments = payments;
+        _points = points;
     }
 
     // Seller creates takeover request for a listing
@@ -83,7 +86,7 @@ public sealed class TakeoverService
         ));
     }
 
-    // Broker accepts/rejects. If accept => create payment (pending) and return payUrl
+    // Broker accepts/rejects. If accept => deduct points (-30) and complete takeover
     public async Task<Result<TakeoverResponse>> DecideAsync(Guid takeoverId, bool accept, bool isAdmin, CancellationToken ct = default)
     {
         var userId = _currentUser.UserId;
@@ -113,68 +116,47 @@ public sealed class TakeoverService
         // accept => domain transition
         takeover.Accept(_clock.UtcNow);
 
-        // init payment
-        var payerUserId = takeover.GetPayerUserId();
-        var paymentInit = await _payments.CreatePaymentAsync(
-            payerUserId: payerUserId,
-            amount: takeover.Fee.Amount,
-            currency: takeover.Fee.Currency,
-            description: $"Takeover fee for listing {takeover.ListingId}",
-            ct: ct
-        );
+        // seller pays -30 points (no negative)
+        var spend = await _points.TrySpendAsync(
+            takeover.SellerUserId,
+            30,
+            "BROKER_TAKEOVER_FEE",
+            "TakeoverRequest",
+            takeover.Id,
+            ct);
 
-        var payment = Payment.CreateTakeoverFee(
-            payerUserId: payerUserId,
-            listingId: takeover.ListingId,
-            takeoverRequestId: takeover.Id,
-            amount: takeover.Fee.Amount,
-            currency: takeover.Fee.Currency,
-            provider: paymentInit.Provider,
-            providerRef: paymentInit.ProviderRef,
-            payUrl: paymentInit.PayUrl
-        );
+        if (!spend.IsSuccess)
+        {
+            // rollback accept to pending if insufficient points
+            takeover.Reject(_clock.UtcNow);
+            await _db.SaveChangesAsync(true, ct);
+            return Result<TakeoverResponse>.Fail(ErrorCodes.Validation, "INSUFFICIENT_POINTS");
+        }
 
-        _db.Payments.Add(payment);
-        await _db.SaveChangesAsync(true, ct);
+        // complete takeover and assign broker
+        takeover.Complete(_clock.UtcNow);
 
-        // attach payment to takeover (domain)
-        takeover.AttachPayment(payment.Id);
+        var listing = await _db.Listings.FirstOrDefaultAsync(x => x.Id == takeover.ListingId && !x.IsDeleted, ct);
+        if (listing is null) return Result<TakeoverResponse>.Fail(ErrorCodes.NotFound, "Listing not found.");
+        listing.AssignBroker(takeover.BrokerUserId);
+
+        // update conversations current responsible user
+        var convs = await _db.Conversations.Where(x => x.ListingId == takeover.ListingId && !x.IsDeleted).ToListAsync(ct);
+        foreach (var c in convs)
+        {
+            c.ResponsibleUserId = takeover.BrokerUserId;
+        }
+
         await _db.SaveChangesAsync(true, ct);
 
         return Result<TakeoverResponse>.Ok(new TakeoverResponse(
             takeover.Id, takeover.ListingId, takeover.SellerUserId, takeover.BrokerUserId,
-            takeover.Payer, takeover.Fee.Amount, takeover.Fee.Currency,
-            takeover.Status, takeover.PaymentId, payment.PayUrl
+            takeover.Payer, 30m, "PTS",
+            takeover.Status, null, null
         ));
     }
 
-    // Payment webhook/confirm => mark paid + complete takeover + assign broker
-    public async Task<Result> MarkPaymentPaidAsync(Guid paymentId, string? rawPayloadJson, CancellationToken ct = default)
-    {
-        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Id == paymentId && !x.IsDeleted, ct);
-        if (payment is null) return Result.Fail(ErrorCodes.NotFound, "Payment not found.");
-
-        if (payment.Status == PaymentStatus.Paid) return Result.Ok();
-
-        payment.MarkPaid(rawPayloadJson);
-
-        if (payment.TakeoverRequestId is null || payment.ListingId is null)
-            return Result.Fail(ErrorCodes.Validation, "Invalid payment linkage.");
-
-        var takeover = await _db.TakeoverRequests
-            .FirstOrDefaultAsync(x => x.Id == payment.TakeoverRequestId.Value && !x.IsDeleted, ct);
-        if (takeover is null) return Result.Fail(ErrorCodes.NotFound, "Takeover request not found.");
-
-        var listing = await _db.Listings.FirstOrDefaultAsync(x => x.Id == payment.ListingId.Value && !x.IsDeleted, ct);
-        if (listing is null) return Result.Fail(ErrorCodes.NotFound, "Listing not found.");
-
-        // complete takeover (domain) + assign broker (domain)
-        takeover.Complete(_clock.UtcNow);
-        listing.AssignBroker(takeover.BrokerUserId);
-
-        await _db.SaveChangesAsync(true, ct);
-        return Result.Ok();
-    }
+    // Payment webhook path is no longer used for takeover fee in points-based flow
 
     // Seller unassign broker => take back responsibility
     public async Task<Result> UnassignBrokerAsync(Guid listingId, bool isAdmin, CancellationToken ct = default)
