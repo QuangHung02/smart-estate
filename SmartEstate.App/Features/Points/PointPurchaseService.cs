@@ -7,6 +7,7 @@ using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Errors;
 using SmartEstate.Shared.Results;
 using SmartEstate.Shared.Time;
+using SmartEstate.Domain.Enums;
 
 namespace SmartEstate.App.Features.Points;
 
@@ -114,7 +115,7 @@ public sealed class PointPurchaseService
         var r = await _points.AddPermanentAsync(
             purchase.UserId,
             purchase.Points,
-            "POINT_PURCHASE",
+            "PURCHASE_POINTS",
             "PointPurchase",
             purchase.Id,
             ct);
@@ -123,8 +124,22 @@ public sealed class PointPurchaseService
 
         purchase.Status = PointPurchaseStatus.Completed;
 
+        // Tự động duyệt các listing đang chờ thanh toán nếu đủ điểm
+        var awaitings = await _db.Listings
+            .Where(x => !x.IsDeleted
+                && x.CreatedByUserId == purchase.UserId
+                && x.ModerationStatus == ModerationStatus.AwaitingPayment)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(ct);
+
+        foreach (var l in awaitings)
+        {
+            var spendPost = await _points.TrySpendAsync(purchase.UserId, 1, "SPEND_POST", "Listing", l.Id, ct);
+            if (!spendPost.IsSuccess) break;
+            l.Approve("Auto-approved after payment.");
+        }
+
         await _db.SaveChangesAsync(true, ct);
         return Result.Ok();
     }
 }
-

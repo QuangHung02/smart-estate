@@ -1,5 +1,3 @@
-﻿using SmartEstate.Domain.Enums;
-
 namespace SmartEstate.App.Features.Auth.Dtos;
 
 public sealed record ProfileResponse(
@@ -7,7 +5,7 @@ public sealed record ProfileResponse(
     string Email,
     string DisplayName,
     string? Phone,
-    UserRole Role,
+    string Role,
     bool IsActive,
     DateTimeOffset? LastLoginAt
 );

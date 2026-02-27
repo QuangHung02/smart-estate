@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.AspNetCore.Authorization;
+﻿﻿﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartEstate.App.Features.Listings;
 using SmartEstate.App.Features.Listings.Dtos;
@@ -28,7 +28,7 @@ public sealed class ListingsController : ControllerBase
         _currentUser = currentUser;
     }
 
-    // Create listing: Seller/Broker
+    // Create listing: User/Broker/Admin
     /// <summary>
     /// Create a new property listing.
     /// </summary>
@@ -36,7 +36,7 @@ public sealed class ListingsController : ControllerBase
     /// <response code="400">Validation failed.</response>
     /// <response code="403">User is not Seller or Broker.</response>
     [HttpPost]
-    [Authorize(Roles = "Seller,Broker,Admin")]
+    [Authorize(Roles = "User,Broker,Admin")]
     [ProducesResponseType(typeof(Guid), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(403)]
@@ -51,7 +51,7 @@ public sealed class ListingsController : ControllerBase
     /// Update an existing listing.
     /// </summary>
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Seller,Broker,Admin")]
+    [Authorize(Roles = "User,Broker,Admin")]
     [ProducesResponseType(typeof(Guid), 200)]
     [ProducesResponseType(403)]
     [ProducesResponseType(404)]
@@ -102,7 +102,7 @@ public sealed class ListingsController : ControllerBase
 
     // Update lifecycle: responsible or admin
     [HttpPatch("{id:guid}/lifecycle")]
-    [Authorize(Roles = "Seller,Broker,Admin")]
+    [Authorize(Roles = "User,Broker,Admin")]
     public async Task<IActionResult> UpdateLifecycle([FromRoute] Guid id, [FromBody] UpdateLifecycleRequest req, CancellationToken ct)
     {
         var isAdmin = User.IsInRole("Admin");
@@ -112,7 +112,7 @@ public sealed class ListingsController : ControllerBase
 
     // Upload image: multipart/form-data
     [HttpPost("{id:guid}/images")]
-    [Authorize(Roles = "Seller,Broker,Admin")]
+    [Authorize(Roles = "User,Broker,Admin")]
     [RequestSizeLimit(25_000_000)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadImage(

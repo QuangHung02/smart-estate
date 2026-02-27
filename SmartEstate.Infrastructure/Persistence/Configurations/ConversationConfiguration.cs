@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SmartEstate.Domain.Entities;
 
@@ -30,6 +30,10 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
             .WithMany()
             .HasForeignKey(x => x.ResponsibleUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasIndex(x => x.LastMessageAt);
+        b.HasIndex(x => x.BuyerUserId);
+        b.HasIndex(x => x.ResponsibleUserId);
 
         b.HasIndex(x => x.IsDeleted);
     }

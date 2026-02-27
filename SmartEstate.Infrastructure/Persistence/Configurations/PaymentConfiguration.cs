@@ -18,6 +18,7 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.Property(x => x.ProviderRef).HasMaxLength(200);
         b.Property(x => x.PayUrl).HasMaxLength(1000);
         b.Property(x => x.RawPayloadJson).HasColumnType("nvarchar(max)");
+        b.Property(x => x.PaidAt);
 
         b.OwnsOne(x => x.Amount, money =>
         {
@@ -29,6 +30,6 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.HasIndex(x => x.PayerUserId);
         b.HasIndex(x => x.TakeoverRequestId);
         b.HasIndex(x => x.PointPurchaseId);
-        b.HasIndex(x => x.ProviderRef);
+        b.HasIndex(x => new { x.Provider, x.ProviderRef }).IsUnique(false);
     }
 }

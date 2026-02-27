@@ -22,7 +22,7 @@ public sealed class TakeoversController : ControllerBase
     /// Seller requests a broker takeover for a listing.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Seller,Broker,Admin")]
+    [Authorize(Roles = "User,Admin")]
     [ProducesResponseType(typeof(Guid), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(403)]
@@ -55,7 +55,7 @@ public sealed class TakeoversController : ControllerBase
     /// Seller unassigns a broker from a listing.
     /// </summary>
     [HttpPost("/api/listings/{listingId:guid}/unassign-broker")]
-    [Authorize(Roles = "Seller,Admin")]
+    [Authorize(Roles = "User,Admin")]
     [ProducesResponseType(200)]
     [ProducesResponseType(403)]
     public async Task<IActionResult> UnassignBroker([FromRoute] Guid listingId, CancellationToken ct)

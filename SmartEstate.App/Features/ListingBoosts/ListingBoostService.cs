@@ -54,7 +54,7 @@ public sealed class ListingBoostService
         _db.ListingBoosts.Add(boost);
         await _db.SaveChangesAsync(true, ct);
 
-        var spend = await _points.TrySpendAsync(userId.Value, 10, "LISTING_BOOST", "ListingBoost", boost.Id, ct);
+        var spend = await _points.TrySpendAsync(userId.Value, 10, "SPEND_BOOST", "ListingBoost", boost.Id, ct);
         if (!spend.IsSuccess)
         {
             // rollback if insufficient points
@@ -68,4 +68,3 @@ public sealed class ListingBoostService
         return Result.Ok();
     }
 }
-

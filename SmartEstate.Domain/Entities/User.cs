@@ -1,5 +1,4 @@
-﻿using SmartEstate.Domain.Common;
-using SmartEstate.Domain.Enums;
+using SmartEstate.Domain.Common;
 
 namespace SmartEstate.Domain.Entities;
 
@@ -10,7 +9,8 @@ public class User : AuditableEntity
     public string DisplayName { get; private set; } = default!;
     public string? Phone { get; private set; }
 
-    public UserRole Role { get; private set; } = UserRole.User;
+    public short RoleId { get; private set; }
+    public Role Role { get; set; } = default!;
 
     public bool IsActive { get; private set; } = true;
     public DateTimeOffset? LastLoginAt { get; private set; }
@@ -27,7 +27,7 @@ public class User : AuditableEntity
 
 
     // -------------------- Factory --------------------
-    public static User Create(string email, string displayName, UserRole role = UserRole.User)
+    public static User Create(string email, string displayName, short roleId)
     {
         Guards.AgainstNullOrEmpty(email, "email");
         Guards.AgainstNullOrEmpty(displayName, "displayName");
@@ -36,7 +36,7 @@ public class User : AuditableEntity
         {
             Email = email.Trim().ToLowerInvariant(),
             DisplayName = displayName.Trim(),
-            Role = role,
+            RoleId = roleId,
             IsActive = true
         };
     }
@@ -59,9 +59,9 @@ public class User : AuditableEntity
         Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
     }
 
-    public void SetRole(UserRole role)
+    public void SetRoleId(short roleId)
     {
-        Role = role;
+        RoleId = roleId;
     }
 
     public void Activate() => IsActive = true;

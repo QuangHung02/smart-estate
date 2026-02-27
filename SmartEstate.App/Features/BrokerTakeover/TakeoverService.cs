@@ -43,9 +43,10 @@ public sealed class TakeoverService
             return Result<TakeoverResponse>.Fail(ErrorCodes.Forbidden, "No permission to request takeover on this listing.");
 
         // broker must exist and be Broker role
-        var broker = await _db.Users.FirstOrDefaultAsync(x => x.Id == req.BrokerUserId && !x.IsDeleted && x.IsActive, ct);
+        var broker = await _db.Users.Include(x => x.Role).FirstOrDefaultAsync(x => x.Id == req.BrokerUserId && !x.IsDeleted && x.IsActive, ct);
         if (broker is null) return Result<TakeoverResponse>.Fail(ErrorCodes.NotFound, "Broker user not found.");
-        if (broker.Role != UserRole.Broker && broker.Role != UserRole.Admin)
+        if (!string.Equals(broker.Role.Name, "Broker", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(broker.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
             return Result<TakeoverResponse>.Fail(ErrorCodes.Validation, "Target user is not a broker.");
 
         // prevent duplicate active requests (pending/accepted) for same listing + broker
@@ -64,8 +65,6 @@ public sealed class TakeoverService
             sellerUserId: userId.Value,
             brokerUserId: req.BrokerUserId,
             payer: req.Payer,
-            feeAmount: req.FeeAmount,
-            feeCurrency: req.FeeCurrency,
             note: req.Note
         );
 
@@ -78,11 +77,9 @@ public sealed class TakeoverService
             takeover.SellerUserId,
             takeover.BrokerUserId,
             takeover.Payer,
-            takeover.Fee.Amount,
-            takeover.Fee.Currency,
-            takeover.Status,
-            takeover.PaymentId,
-            null
+            takeover.IsFeePaid,
+            takeover.PaidAt,
+            takeover.Status
         ));
     }
 
@@ -108,8 +105,8 @@ public sealed class TakeoverService
 
             return Result<TakeoverResponse>.Ok(new TakeoverResponse(
                 takeover.Id, takeover.ListingId, takeover.SellerUserId, takeover.BrokerUserId,
-                takeover.Payer, takeover.Fee.Amount, takeover.Fee.Currency,
-                takeover.Status, takeover.PaymentId, null
+                takeover.Payer, takeover.IsFeePaid, takeover.PaidAt,
+                takeover.Status
             ));
         }
 
@@ -120,7 +117,7 @@ public sealed class TakeoverService
         var spend = await _points.TrySpendAsync(
             takeover.SellerUserId,
             30,
-            "BROKER_TAKEOVER_FEE",
+            "SPEND_TAKEOVER",
             "TakeoverRequest",
             takeover.Id,
             ct);
@@ -133,6 +130,7 @@ public sealed class TakeoverService
             return Result<TakeoverResponse>.Fail(ErrorCodes.Validation, "INSUFFICIENT_POINTS");
         }
 
+        takeover.MarkFeePaid(_clock.UtcNow);
         // complete takeover and assign broker
         takeover.Complete(_clock.UtcNow);
 
@@ -151,8 +149,8 @@ public sealed class TakeoverService
 
         return Result<TakeoverResponse>.Ok(new TakeoverResponse(
             takeover.Id, takeover.ListingId, takeover.SellerUserId, takeover.BrokerUserId,
-            takeover.Payer, 30m, "PTS",
-            takeover.Status, null, null
+            takeover.Payer, takeover.IsFeePaid, takeover.PaidAt,
+            takeover.Status
         ));
     }
 

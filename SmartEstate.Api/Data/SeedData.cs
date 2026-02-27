@@ -1,6 +1,5 @@
 using SmartEstate.App.Common.Abstractions;
 using SmartEstate.Domain.Entities;
-using SmartEstate.Domain.Enums;
 using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -33,14 +32,50 @@ public static class SeedData
 
             logger?.LogInformation("Seeding initial data...");
 
+            // Roles
+            if (!ctx.Roles.Any())
+            {
+                ctx.Roles.AddRange(
+                    new Role { Id = 1, Name = "User", Description = "Regular user" },
+                    new Role { Id = 2, Name = "Seller", Description = "Seller" },
+                    new Role { Id = 3, Name = "Broker", Description = "Broker" },
+                    new Role { Id = 4, Name = "Admin", Description = "Administrator" }
+                );
+                await ctx.SaveChangesAsync();
+            }
+
+            // minimal permissions
+            if (!ctx.Permissions.Any())
+            {
+                ctx.Permissions.AddRange(
+                    new Permission { Id = 1, Code = "LISTING_CREATE", Description = "Create listing" },
+                    new Permission { Id = 2, Code = "MODERATION_REVIEW", Description = "Moderation" },
+                    new Permission { Id = 3, Code = "POINT_BUY", Description = "Buy points" }
+                );
+                await ctx.SaveChangesAsync();
+            }
+
+            if (!ctx.RolePermissions.Any())
+            {
+                ctx.RolePermissions.AddRange(
+                    new RolePermission { RoleId = 2, PermissionId = 1 },
+                    new RolePermission { RoleId = 3, PermissionId = 1 },
+                    new RolePermission { RoleId = 4, PermissionId = 2 },
+                    new RolePermission { RoleId = 1, PermissionId = 3 },
+                    new RolePermission { RoleId = 2, PermissionId = 3 },
+                    new RolePermission { RoleId = 3, PermissionId = 3 }
+                );
+                await ctx.SaveChangesAsync();
+            }
+
             // Users
-            var admin = User.Create("admin@local", "Admin", UserRole.Admin);
+            var admin = User.Create("admin@local", "Admin", 4);
             admin.SetPasswordHash(hasher.Hash("Admin123!"));
 
-            var seller = User.Create("seller@local", "Seller One", UserRole.Seller);
+            var seller = User.Create("seller@local", "Seller One", 2);
             seller.SetPasswordHash(hasher.Hash("Seller123!"));
 
-            var broker = User.Create("broker@local", "Broker Joe", UserRole.Broker);
+            var broker = User.Create("broker@local", "Broker Joe", 3);
             broker.SetPasswordHash(hasher.Hash("Broker123!"));
 
             ctx.Users.AddRange(admin, seller, broker);

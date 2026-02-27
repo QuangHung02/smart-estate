@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartEstate.App.Common.Abstractions;
 using SmartEstate.App.Features.Auth.Dtos;
 using SmartEstate.Domain.Entities;
@@ -37,8 +37,9 @@ public sealed class AuthService
         if (exists)
             return Result<AuthResponse>.Fail(ErrorCodes.Conflict, "Email already exists.");
 
-        // domain create
-        var user = User.Create(email, req.DisplayName, UserRole.User);
+        var defaultRole = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.Name == "User", ct);
+        if (defaultRole is null) return Result<AuthResponse>.Fail(ErrorCodes.Unexpected, "Role 'User' not found.");
+        var user = User.Create(email, req.DisplayName, defaultRole.Id);
 
         // domain set password hash
         user.SetPasswordHash(_hasher.Hash(req.Password));
@@ -46,8 +47,9 @@ public sealed class AuthService
         _db.Users.Add(user);
         await _db.SaveChangesAsync(true, ct);
 
-        var token = _jwt.CreateToken(user.Id, user.Email, user.Role.ToString());
-        return Result<AuthResponse>.Ok(new AuthResponse(user.Id, user.Email, user.Role.ToString(), token));
+        var roleName = (await _db.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == user.RoleId, ct))?.Name ?? "User";
+        var token = _jwt.CreateToken(user.Id, user.Email, roleName);
+        return Result<AuthResponse>.Ok(new AuthResponse(user.Id, user.Email, roleName, token));
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest req, CancellationToken ct = default)
@@ -80,8 +82,9 @@ public sealed class AuthService
 
         await _db.SaveChangesAsync(true, ct);
 
-        var token = _jwt.CreateToken(user.Id, user.Email, user.Role.ToString());
-        return Result<AuthResponse>.Ok(new AuthResponse(user.Id, user.Email, user.Role.ToString(), token));
+        var roleName = (await _db.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == user.RoleId, ct))?.Name ?? "User";
+        var token = _jwt.CreateToken(user.Id, user.Email, roleName);
+        return Result<AuthResponse>.Ok(new AuthResponse(user.Id, user.Email, roleName, token));
     }
 
 
@@ -133,14 +136,17 @@ public sealed class AuthService
         return Result<ProfileResponse>.Ok(ToProfile(user));
     }
 
-    private static ProfileResponse ToProfile(User u)
-        => new(
+    private ProfileResponse ToProfile(User u)
+    {
+        var roleName = _db.Roles.AsNoTracking().FirstOrDefault(x => x.Id == u.RoleId)?.Name ?? "User";
+        return new ProfileResponse(
             u.Id,
             u.Email,
             u.DisplayName,
             u.Phone,
-            u.Role,
+            roleName,
             u.IsActive,
             u.LastLoginAt
         );
+    }
 }

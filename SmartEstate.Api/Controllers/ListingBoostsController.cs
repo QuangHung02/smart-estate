@@ -18,7 +18,7 @@ public sealed class ListingBoostsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/boost")]
-    [Authorize(Roles = "Seller,Broker,Admin")]
+    [Authorize(Roles = "User,Broker,Admin")]
     [ProducesResponseType(200)]
     [ProducesResponseType(typeof(AppError), 400)]
     [ProducesResponseType(typeof(AppError), 401)]
@@ -46,4 +46,3 @@ public sealed class ListingBoostsController : ControllerBase
         };
     }
 }
-

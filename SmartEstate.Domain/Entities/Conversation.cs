@@ -12,6 +12,9 @@ public class Conversation : AuditableEntity
     // snapshot of responsible at creation (optional, but useful)
     public Guid ResponsibleUserId { get; set; }
 
+    public DateTimeOffset? BuyerLastReadAt { get; set; }
+    public DateTimeOffset? ResponsibleLastReadAt { get; set; }
+
     public DateTimeOffset? LastMessageAt { get; set; }
     public string? LastMessagePreview { get; set; }
 

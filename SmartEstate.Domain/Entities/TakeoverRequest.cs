@@ -1,4 +1,4 @@
-﻿using SmartEstate.Domain.Common;
+using SmartEstate.Domain.Common;
 using SmartEstate.Domain.Enums;
 using SmartEstate.Domain.ValueObjects;
 
@@ -12,7 +12,8 @@ public class TakeoverRequest : AuditableEntity
     public Guid BrokerUserId { get; private set; }      // target broker
 
     public TakeoverPayer Payer { get; private set; } = TakeoverPayer.Seller;
-    public Money Fee { get; private set; } = new Money(0);
+    public bool IsFeePaid { get; private set; }
+    public DateTimeOffset? PaidAt { get; private set; }
 
     public TakeoverStatus Status { get; private set; } = TakeoverStatus.Pending;
 
@@ -21,26 +22,20 @@ public class TakeoverRequest : AuditableEntity
     public DateTimeOffset? CancelledAt { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
 
-    public Guid? PaymentId { get; private set; }
-
     public string? Note { get; private set; } // optional note from seller
 
     // Navigation
     public Listing Listing { get; set; } = default!;
     public User SellerUser { get; set; } = default!;
     public User BrokerUser { get; set; } = default!;
-    public Payment? Payment { get; set; }
 
     public static TakeoverRequest Create(
         Guid listingId,
         Guid sellerUserId,
         Guid brokerUserId,
         TakeoverPayer payer,
-        decimal feeAmount,
-        string feeCurrency,
         string? note)
     {
-        if (feeAmount < 0) throw new DomainException("fee must be >= 0");
         if (sellerUserId == brokerUserId) throw new DomainException("seller and broker cannot be the same user");
 
         return new TakeoverRequest
@@ -49,7 +44,6 @@ public class TakeoverRequest : AuditableEntity
             SellerUserId = sellerUserId,
             BrokerUserId = brokerUserId,
             Payer = payer,
-            Fee = new Money(feeAmount, feeCurrency),
             Status = TakeoverStatus.Pending,
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim()
         };
@@ -82,20 +76,18 @@ public class TakeoverRequest : AuditableEntity
         CancelledAt = at;
     }
 
-    public void AttachPayment(Guid paymentId)
+    public void MarkFeePaid(DateTimeOffset at)
     {
-        if (Status != TakeoverStatus.Accepted)
-            throw new DomainException("payment can only be attached after accepted");
-
-        PaymentId = paymentId;
+        IsFeePaid = true;
+        PaidAt = at;
     }
 
     public void Complete(DateTimeOffset at)
     {
         if (Status != TakeoverStatus.Accepted)
             throw new DomainException("only accepted request can be completed");
-        if (PaymentId is null)
-            throw new DomainException("payment required to complete takeover");
+        if (!IsFeePaid)
+            throw new DomainException("fee must be paid to complete takeover");
 
         Status = TakeoverStatus.Completed;
         CompletedAt = at;

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -86,6 +86,9 @@ builder.Services.AddScoped<IPaymentGateway, DummyPaymentGateway>();
 
 // Jwt options
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+
+// Background jobs
+builder.Services.AddHostedService<SmartEstate.Api.Jobs.AwaitingPaymentCleanupService>();
 
 // JWT authentication
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()!;

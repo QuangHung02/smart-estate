@@ -22,6 +22,7 @@ public class Payment : AuditableEntity
 
     // raw payload (webhook/debug)
     public string? RawPayloadJson { get; private set; }
+    public DateTimeOffset? PaidAt { get; private set; }
 
     public static Payment CreateTakeoverFee(
         Guid payerUserId,
@@ -79,6 +80,7 @@ public class Payment : AuditableEntity
     {
         Status = PaymentStatus.Paid;
         RawPayloadJson = rawPayloadJson;
+        PaidAt = DateTimeOffset.UtcNow;
     }
 
     public void MarkFailed(string? rawPayloadJson = null)

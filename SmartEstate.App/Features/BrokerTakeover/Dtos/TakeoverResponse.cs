@@ -1,4 +1,4 @@
-﻿using SmartEstate.Domain.Enums;
+using SmartEstate.Domain.Enums;
 
 namespace SmartEstate.App.Features.BrokerTakeover.Dtos;
 
@@ -8,9 +8,7 @@ public sealed record TakeoverResponse(
     Guid SellerUserId,
     Guid BrokerUserId,
     TakeoverPayer Payer,
-    decimal FeeAmount,
-    string FeeCurrency,
-    TakeoverStatus Status,
-    Guid? PaymentId,
-    string? PayUrl
+    bool IsFeePaid,
+    DateTimeOffset? PaidAt,
+    TakeoverStatus Status
 );

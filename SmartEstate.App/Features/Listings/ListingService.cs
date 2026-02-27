@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmartEstate.App.Common.Abstractions;
 using SmartEstate.App.Features.Listings.Dtos;
+using SmartEstate.App.Features.Points;
 using SmartEstate.Domain.Entities;
 using SmartEstate.Domain.Enums;
 using SmartEstate.Infrastructure.Persistence;
@@ -16,17 +17,20 @@ public sealed class ListingService
     private readonly ICurrentUser _currentUser;
     private readonly IAiModerationService _moderation;
     private readonly IFileStorage _storage;
+    private readonly PointsService _points;
 
     public ListingService(
         SmartEstateDbContext db,
         ICurrentUser currentUser,
         IAiModerationService moderation,
-        IFileStorage storage)
+        IFileStorage storage,
+        PointsService points)
     {
         _db = db;
         _currentUser = currentUser;
         _moderation = moderation;
         _storage = storage;
+        _points = points;
     }
 
     public async Task<Result<ListingDetailResponse>> CreateAsync(CreateListingRequest req, CancellationToken ct = default)
@@ -48,9 +52,25 @@ public sealed class ListingService
             mod.Reason,
             mod.FlagsJson);
 
+        // Nếu AI auto-approve: kiểm tra điểm trước khi lưu
+        if (mod.Decision == "AUTO_APPROVE")
+        {
+            var spend = await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
+            if (!spend.IsSuccess)
+            {
+                listing.AwaitPayment("Awaiting payment to publish.");
+            }
+        }
+
         _db.Listings.Add(listing);
         _db.ModerationReports.Add(report);
         await _db.SaveChangesAsync(true, ct);
+
+        if (listing.ModerationStatus == ModerationStatus.Approved)
+        {
+            // Trừ điểm khi auto-approve, không chặn tạo nếu thiếu điểm
+            await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
+        }
 
         return Result<ListingDetailResponse>.Ok(ToDetail(listing, new List<ListingImageDto>()));
     }

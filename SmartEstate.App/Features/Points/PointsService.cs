@@ -70,7 +70,10 @@ public sealed class PointsService
             RefId = refId,
             IsMonthlyBucket = beforeMonthly > 0,
             BalanceMonthlyAfter = up.MonthlyPoints,
-            BalancePermanentAfter = up.PermanentPoints
+            BalancePermanentAfter = up.PermanentPoints,
+            Bucket = beforeMonthly > 0 ? "MONTHLY" : "PERMANENT",
+            MonthKey = beforeMonthly > 0 ? monthKey : null,
+            TxType = reason
         };
 
         _db.PointLedgerEntries.Add(entry);
@@ -95,7 +98,10 @@ public sealed class PointsService
             RefId = refId,
             IsMonthlyBucket = false,
             BalanceMonthlyAfter = up.MonthlyPoints,
-            BalancePermanentAfter = up.PermanentPoints
+            BalancePermanentAfter = up.PermanentPoints,
+            Bucket = "PERMANENT",
+            MonthKey = null,
+            TxType = reason
         };
 
         _db.PointLedgerEntries.Add(entry);
@@ -117,7 +123,11 @@ public sealed class PointsService
         var nextYear = month == 12 ? year + 1 : year;
         var monthEnd = new DateTimeOffset(nextYear, nextMonth, 1, 0, 0, 0, TimeSpan.Zero);
 
-        var users = await _db.Users.AsNoTracking().Where(x => !x.IsDeleted && x.IsActive).Select(x => new { x.Id, x.Role }).ToListAsync(ct);
+        var users = await _db.Users
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive)
+            .Join(_db.Roles.AsNoTracking(), u => u.RoleId, r => r.Id, (u, r) => new { u.Id, RoleName = r.Name })
+            .ToListAsync(ct);
 
         foreach (var u in users)
         {
@@ -134,9 +144,10 @@ public sealed class PointsService
             }
 
             var amount = 0;
-            if (u.Role == UserRole.Broker)
+            if (string.Equals(u.RoleName, "Broker", StringComparison.OrdinalIgnoreCase))
                 amount = 20;
-            else if (u.Role == UserRole.User || u.Role == UserRole.Seller)
+            else if (string.Equals(u.RoleName, "User", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(u.RoleName, "Seller", StringComparison.OrdinalIgnoreCase))
                 amount = 3;
 
             if (amount <= 0) continue;
@@ -147,7 +158,7 @@ public sealed class PointsService
                 .AnyAsync(e =>
                     e.UserId == u.Id
                     && !e.IsDeleted
-                    && e.Reason == "MONTHLY_GRANT"
+                    && e.Reason == "GRANT_MONTHLY"
                     && e.CreatedAt >= monthStart
                     && e.CreatedAt < monthEnd, ct);
             if (granted) continue;
@@ -158,12 +169,15 @@ public sealed class PointsService
             {
                 UserId = u.Id,
                 Delta = amount,
-                Reason = "MONTHLY_GRANT",
+                Reason = "GRANT_MONTHLY",
                 RefType = "MonthlyGrant",
                 RefId = null,
                 IsMonthlyBucket = true,
                 BalanceMonthlyAfter = up.MonthlyPoints,
-                BalancePermanentAfter = up.PermanentPoints
+                BalancePermanentAfter = up.PermanentPoints,
+                Bucket = "MONTHLY",
+                MonthKey = key,
+                TxType = "GRANT_MONTHLY"
             };
 
             _db.PointLedgerEntries.Add(entry);

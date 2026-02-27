@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SmartEstate.Domain.Entities;
 
@@ -18,7 +18,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         b.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
         b.Property(x => x.Phone).HasMaxLength(50);
 
-        b.Property(x => x.Role).IsRequired();
+        b.Property(x => x.RoleId).IsRequired();
+        b.HasOne(x => x.Role)
+            .WithMany()
+            .HasForeignKey(x => x.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
         b.Property(x => x.IsActive).IsRequired();
 
         // soft delete

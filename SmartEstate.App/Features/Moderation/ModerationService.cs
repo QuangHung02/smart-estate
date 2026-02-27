@@ -6,6 +6,7 @@ using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Errors;
 using SmartEstate.Shared.Results;
 using SmartEstate.Shared.Time;
+using SmartEstate.App.Features.Points;
 
 namespace SmartEstate.App.Features.Moderation;
 
@@ -14,15 +15,18 @@ public sealed class ModerationService
     private readonly SmartEstateDbContext _db;
     private readonly ICurrentUser _currentUser;
     private readonly IClock _clock;
+    private readonly PointsService _points;
 
     public ModerationService(
         SmartEstateDbContext db,
         ICurrentUser currentUser,
-        IClock clock)
+        IClock clock,
+        PointsService points)
     {
         _db = db;
         _currentUser = currentUser;
         _clock = clock;
+        _points = points;
     }
 
     public async Task<Result<IReadOnlyList<PendingListingModerationItemDto>>> GetPendingListingsAsync(CancellationToken ct = default)
@@ -89,6 +93,17 @@ public sealed class ModerationService
 
         if (listing is null) return Result.Fail(ErrorCodes.NotFound, "Listing not found.");
 
+        var spend = await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
+        // Không chặn duyệt nếu thiếu điểm: nếu không đủ điểm, phép trừ bị bỏ qua nhưng vẫn duyệt
+        // Kiểm tra đủ điểm trước khi approve
+        var spend = await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
+        if (!spend.IsSuccess)
+        {
+            listing.AwaitPayment("Awaiting payment to publish.");
+            await _db.SaveChangesAsync(true, ct);
+            return Result.Fail(ErrorCodes.Validation, "AWAITING_PAYMENT");
+        }
+
         listing.Approve(reason);
 
         var latestReport = listing.ModerationReports
@@ -151,4 +166,3 @@ public sealed class ModerationService
         return Result.Ok();
     }
 }
-
