@@ -94,9 +94,6 @@ public sealed class ModerationService
         if (listing is null) return Result.Fail(ErrorCodes.NotFound, "Listing not found.");
 
         var spend = await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
-        // Không chặn duyệt nếu thiếu điểm: nếu không đủ điểm, phép trừ bị bỏ qua nhưng vẫn duyệt
-        // Kiểm tra đủ điểm trước khi approve
-        var spend = await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
         if (!spend.IsSuccess)
         {
             listing.AwaitPayment("Awaiting payment to publish.");

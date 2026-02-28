@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartEstate.App.Common.Abstractions;
 using SmartEstate.App.Features.Points.Dtos;
 using SmartEstate.Domain.Entities;
-using SmartEstate.Domain.Enums;
+ 
 using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Errors;
 using SmartEstate.Shared.Results;
@@ -124,7 +124,6 @@ public sealed class PointPurchaseService
 
         purchase.Status = PointPurchaseStatus.Completed;
 
-        // Tự động duyệt các listing đang chờ thanh toán nếu đủ điểm
         var awaitings = await _db.Listings
             .Where(x => !x.IsDeleted
                 && x.CreatedByUserId == purchase.UserId

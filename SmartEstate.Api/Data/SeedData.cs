@@ -3,6 +3,7 @@ using SmartEstate.Domain.Entities;
 using SmartEstate.Infrastructure.Persistence;
 using SmartEstate.Shared.Time;
 using Microsoft.EntityFrameworkCore;
+using SmartEstate.Domain.Enums;
 
 namespace SmartEstate.Api.Data;
 

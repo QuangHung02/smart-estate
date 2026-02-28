@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartEstate.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SmartEstate.Infrastructure.Persistence;
 namespace SmartEstate.Infrastructure.Migrations
 {
     [DbContext(typeof(SmartEstateDbContext))]
-    partial class SmartEstateDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260227115358_ERDv2")]
+    partial class ERDv2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

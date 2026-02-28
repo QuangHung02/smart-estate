@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using SmartEstate.App.Features.Auth;
 using SmartEstate.App.Features.Auth.Dtos;
 
@@ -22,7 +22,7 @@ public sealed class AuthController : ControllerBase
     /// <response code="409">Email already exists.</response>
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
-    [ProducesResponseType(typeof(Shared.Results.Error), 409)]
+    [ProducesResponseType(typeof(SmartEstate.Shared.Errors.AppError), 409)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
     {
         var result = await _auth.RegisterAsync(req, ct);
@@ -39,7 +39,7 @@ public sealed class AuthController : ControllerBase
     /// <response code="401">Invalid credentials.</response>
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
-    [ProducesResponseType(typeof(Shared.Results.Error), 401)]
+    [ProducesResponseType(typeof(SmartEstate.Shared.Errors.AppError), 401)]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         var result = await _auth.LoginAsync(req, ct);

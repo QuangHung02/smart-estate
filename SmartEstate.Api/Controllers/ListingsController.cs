@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.AspNetCore.Authorization;
+﻿﻿﻿﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartEstate.App.Features.Listings;
 using SmartEstate.App.Features.Listings.Dtos;
@@ -74,7 +74,7 @@ public sealed class ListingsController : ControllerBase
     /// </remarks>
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(ListingDetailDto), 200)]
+    [ProducesResponseType(typeof(SmartEstate.App.Features.Listings.Dtos.ListingDetailResponse), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetDetail([FromRoute] Guid id, CancellationToken ct)
     {

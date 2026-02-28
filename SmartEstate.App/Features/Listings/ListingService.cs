@@ -52,7 +52,6 @@ public sealed class ListingService
             mod.Reason,
             mod.FlagsJson);
 
-        // Nếu AI auto-approve: kiểm tra điểm trước khi lưu
         if (mod.Decision == "AUTO_APPROVE")
         {
             var spend = await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
@@ -65,12 +64,6 @@ public sealed class ListingService
         _db.Listings.Add(listing);
         _db.ModerationReports.Add(report);
         await _db.SaveChangesAsync(true, ct);
-
-        if (listing.ModerationStatus == ModerationStatus.Approved)
-        {
-            // Trừ điểm khi auto-approve, không chặn tạo nếu thiếu điểm
-            await _points.TrySpendAsync(listing.CreatedByUserId, 1, "SPEND_POST", "Listing", listing.Id, ct);
-        }
 
         return Result<ListingDetailResponse>.Ok(ToDetail(listing, new List<ListingImageDto>()));
     }

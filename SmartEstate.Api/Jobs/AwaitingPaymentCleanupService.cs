@@ -16,7 +16,6 @@ public sealed class AwaitingPaymentCleanupService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // small initial delay to allow app to warm up
         await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -43,7 +42,6 @@ public sealed class AwaitingPaymentCleanupService : BackgroundService
             }
             catch
             {
-                // swallow to keep background loop alive; optionally add logging here
             }
 
             await Task.Delay(_interval, stoppingToken);
